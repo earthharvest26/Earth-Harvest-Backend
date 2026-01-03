@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require('mongoose');
 
 const cartSchema = new mongoose.Schema({
   user: {
@@ -18,4 +18,4 @@ const cartSchema = new mongoose.Schema({
 
 cartSchema.index({user:1});
 
-export default mongoose.model("Cart", cartSchema);
+module.exports = mongoose.model("Cart", cartSchema);

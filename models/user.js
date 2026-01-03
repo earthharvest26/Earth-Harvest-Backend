@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-    name: String,
-    email: String,
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
     phoneNumber: String,
     countryCode: String,
     address:{
@@ -15,6 +15,15 @@ const userSchema = new mongoose.Schema({
     otp: Number,
     otpExpiry : {
         type: Date
+    },
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
+    },
+    isVerified: {
+        type: Boolean,
+        default: false
     }
 },{timestamps: true});
 
