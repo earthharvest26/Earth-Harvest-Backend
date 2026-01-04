@@ -59,83 +59,146 @@ const sendOTPEmail = async (email, otp, name) => {
     const mailOptions = {
       from: `"Earth & Harvest" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: 'Your OTP for Earth & Harvest Login',
+      subject: 'Your One-Time Password for Earth & Harvest',
       html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-            }
-            .container {
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-              border: 1px solid #ddd;
-              border-radius: 10px;
-            }
-            .header {
-              background-color: #4CAF50;
-              color: white;
-              padding: 20px;
-              text-align: center;
-              border-radius: 10px 10px 0 0;
-            }
-            .content {
-              padding: 20px;
-            }
-            .otp-box {
-              background-color: #f4f4f4;
-              padding: 20px;
-              text-align: center;
-              font-size: 32px;
-              font-weight: bold;
-              letter-spacing: 5px;
-              margin: 20px 0;
-              border-radius: 5px;
-            }
-            .footer {
-              text-align: center;
-              padding: 20px;
-              color: #666;
-              font-size: 12px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🌾 Earth & Harvest</h1>
-            </div>
-            <div class="content">
-              <h2>Hello ${name || 'there'}!</h2>
-              <p>Thank you for choosing Earth & Harvest. Use the OTP below to complete your login:</p>
-              <div class="otp-box">${otp}</div>
-              <p>This OTP will expire in 10 minutes.</p>
-              <p>If you didn't request this OTP, please ignore this email.</p>
-            </div>
-            <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} Earth & Harvest. All rights reserved.</p>
-            </div>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>Earth & Harvest OTP</title>
+      <style>
+        body {
+          margin: 0;
+          padding: 0;
+          background-color: #f5f5f5;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          color: #2b2b2b;
+        }
+        .wrapper {
+          width: 100%;
+          padding: 24px 12px;
+        }
+        .container {
+          max-width: 520px;
+          margin: 0 auto;
+          background-color: #ffffff;
+          border-radius: 14px;
+          overflow: hidden;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+        .header {
+          padding: 28px 24px 20px;
+          text-align: center;
+          border-bottom: 1px solid #eee;
+        }
+        .logo {
+          max-width: 140px;
+          margin-bottom: 12px;
+        }
+        .brand {
+          font-size: 20px;
+          font-weight: 600;
+          letter-spacing: 0.4px;
+        }
+        .content {
+          padding: 28px 24px;
+          text-align: left;
+        }
+        .content h2 {
+          margin: 0 0 12px;
+          font-size: 22px;
+          font-weight: 600;
+        }
+        .content p {
+          font-size: 15px;
+          line-height: 1.6;
+          margin: 0 0 16px;
+          color: #555;
+        }
+        .otp-box {
+          margin: 24px 0;
+          padding: 18px;
+          background: #faf7f2;
+          border-radius: 12px;
+          text-align: center;
+          font-size: 32px;
+          font-weight: 700;
+          letter-spacing: 6px;
+          color: #c8945c;
+          border: 1px dashed #e6d5c3;
+        }
+        .hint {
+          font-size: 13px;
+          color: #777;
+        }
+        .footer {
+          padding: 20px;
+          text-align: center;
+          font-size: 12px;
+          color: #888;
+          background-color: #fafafa;
+        }
+        .footer p {
+          margin: 4px 0;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="wrapper">
+        <div class="container">
+          
+          <!-- Header -->
+          <div class="header">
+            <img 
+              src="https://res.cloudinary.com/dpc7tj2ze/image/upload/v1767539648/New_Logo_Tinny_transparent_v6if1w.png"
+              alt="Earth & Harvest"
+              class="logo"
+            />
+            <div class="brand">Earth & Harvest</div>
           </div>
-        </body>
-        </html>
+    
+          <!-- Content -->
+          <div class="content">
+            <h2>Hello ${name || 'there'},</h2>
+            <p>
+              Use the one-time password below to securely log in to your Earth & Harvest account.
+            </p>
+    
+            <div class="otp-box">${otp}</div>
+    
+            <p class="hint">
+              This OTP is valid for <strong>10 minutes</strong>.  
+              If you did not request this code, you can safely ignore this email.
+            </p>
+          </div>
+    
+          <!-- Footer -->
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Earth & Harvest</p>
+            <p>Premium, natural chews — from the Himalayas to your home.</p>
+          </div>
+    
+        </div>
+      </div>
+    </body>
+    </html>
       `,
       text: `
-        Hello ${name || 'there'}!
-        
-        Your OTP for Earth & Harvest login is: ${otp}
-        
-        This OTP will expire in 10 minutes.
-        
-        If you didn't request this OTP, please ignore this email.
-        
-        © ${new Date().getFullYear()} Earth & Harvest. All rights reserved.
-      `
+    Hello ${name || 'there'},
+    
+    Your one-time password for Earth & Harvest login is:
+    
+    ${otp}
+    
+    This OTP is valid for 10 minutes.
+    
+    If you didn’t request this, you can safely ignore this email.
+    
+    © ${new Date().getFullYear()} Earth & Harvest
+    `
     };
+    
 
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ OTP email sent successfully:', info.messageId);
