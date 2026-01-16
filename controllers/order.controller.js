@@ -28,11 +28,16 @@ exports.createOrder = async (req, res) => {
     }
 
     // Verify product exists
+    console.log("Looking for product with ID:", productId);
     const product = await Product.findById(productId);
     if (!product) {
+      console.error("Product not found for ID:", productId);
+      // Try to list available products for debugging
+      const availableProducts = await Product.find({}).select('_id productName').limit(5);
+      console.log("Available products:", availableProducts.map(p => ({ id: p._id, name: p.productName })));
       return res.status(404).json({
         success: false,
-        message: "Product not found"
+        message: `Product not found with ID: ${productId}`
       });
     }
 
@@ -81,8 +86,11 @@ exports.createOrder = async (req, res) => {
       success: true,
       message: "Order created successfully",
       data: {
-        orderId: order._id,
-        amount: parseFloat(amount)
+        _id: order._id,
+        orderId: order._id, // For compatibility
+        amount: parseFloat(amount),
+        orderStatus: order.orderStatus,
+        paymentStatus: order.paymentStatus
       }
     });
 

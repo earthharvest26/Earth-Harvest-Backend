@@ -67,15 +67,27 @@ exports.sendOTP = async (req, res) => {
     await user.save();
 
     // Send OTP via email
+    // IMPORTANT: Do this BEFORE sending response to prevent Render from killing the process
     let emailResult;
     try {
+      console.log(`📧 [Send OTP] Attempting to send OTP email to ${email}...`);
       emailResult = await sendOTPEmail(email, otp, user.name);
+      
       // If dev mode returned, it's still successful
       if (emailResult && emailResult.devOtp) {
-        console.log(`✅ OTP generated (dev mode). Check console for OTP code.`);
+        console.log(`✅ [Send OTP] OTP generated (dev mode). Check console for OTP code.`);
+      } else {
+        console.log(`✅ [Send OTP] OTP email sent successfully`, {
+          messageId: emailResult?.messageId,
+          duration: emailResult?.duration
+        });
       }
     } catch (emailError) {
-      console.error('Email sending failed:', emailError.message || emailError);
+      console.error('❌ [Send OTP] Email sending failed:', {
+        error: emailError.message || emailError,
+        stack: emailError.stack,
+        email: email
+      });
       
       // In development or if ALLOW_DEV_OTP is set, allow OTP to be shown in console
       if (process.env.NODE_ENV === 'development' || process.env.ALLOW_DEV_OTP === 'true') {
