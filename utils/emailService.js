@@ -1,8 +1,8 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 /**
  * ============================================
- * PRODUCTION-SAFE EMAIL SERVICE
+ * PRODUCTION-SAFE EMAIL SERVICE (NODEMAILER)
  * ============================================
  * 
  * This service includes:
@@ -18,8 +18,11 @@ const { Resend } = require('resend');
 
 const logEnvStatus = () => {
   const envVars = {
-    RESEND_API_KEY: process.env.RESEND_API_KEY ? '✅ SET' : '❌ MISSING',
-    FROM_EMAIL: process.env.FROM_EMAIL ? `✅ SET (${process.env.FROM_EMAIL})` : '❌ MISSING (using fallback)',
+    SMTP_HOST: process.env.SMTP_HOST ? '✅ SET' : '❌ MISSING',
+    SMTP_PORT: process.env.SMTP_PORT ? `✅ SET (${process.env.SMTP_PORT})` : '❌ MISSING',
+    SMTP_USER: process.env.SMTP_USER ? '✅ SET' : '❌ MISSING',
+    SMTP_PASS: process.env.SMTP_PASS ? '✅ SET' : '❌ MISSING',
+    FROM_EMAIL: process.env.FROM_EMAIL ? `✅ SET (${process.env.FROM_EMAIL})` : '❌ MISSING (using SMTP_USER)',
     NODE_ENV: process.env.NODE_ENV || 'not set',
   };
 
@@ -38,36 +41,56 @@ if (!global._emailServiceInitialized) {
   global._emailServiceInitialized = true;
 }
 
-// Validate and initialize Resend client
-let resend = null;
+// Validate and initialize Nodemailer transporter
+let transporter = null;
 let FROM_EMAIL = null;
 
 try {
-  const apiKey = process.env.RESEND_API_KEY;
-  
-  if (!apiKey) {
-    console.warn('⚠️  RESEND_API_KEY is not set. Email functionality will be disabled.');
-    console.warn('⚠️  Set RESEND_API_KEY in your Render environment variables.');
+  const smtpConfig = {
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  };
+
+  // Validate required environment variables
+  if (!smtpConfig.host || !smtpConfig.auth.user || !smtpConfig.auth.pass) {
+    console.warn('⚠️  SMTP configuration is incomplete. Email functionality will be disabled.');
+    console.warn('⚠️  Required: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS');
   } else {
-    // Validate API key format (Resend keys typically start with 're_')
-    if (!apiKey.startsWith('re_')) {
-      console.warn('⚠️  RESEND_API_KEY format may be incorrect. Expected format: re_xxxxx');
+    // Validate port
+    if (isNaN(smtpConfig.port) || smtpConfig.port < 1 || smtpConfig.port > 65535) {
+      console.warn(`⚠️  SMTP_PORT (${process.env.SMTP_PORT}) is invalid. Using default: 587`);
+      smtpConfig.port = 587;
+      smtpConfig.secure = false;
     }
+
+    transporter = nodemailer.createTransport(smtpConfig);
     
-    resend = new Resend(apiKey);
-    console.log('✅ Resend client initialized successfully');
+    // Verify connection
+    transporter.verify((error, success) => {
+      if (error) {
+        console.error('❌ SMTP connection verification failed:', error.message);
+        console.error('❌ Email sending may fail. Check your SMTP credentials.');
+      } else {
+        console.log('✅ SMTP connection verified successfully');
+        console.log(`✅ Nodemailer transporter initialized (${smtpConfig.host}:${smtpConfig.port})`);
+      }
+    });
   }
 } catch (error) {
-  console.error('❌ Failed to initialize Resend client:', error.message);
-  resend = null;
+  console.error('❌ Failed to initialize Nodemailer transporter:', error.message);
+  transporter = null;
 }
 
 // Set FROM_EMAIL with validation
-FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+FROM_EMAIL = process.env.FROM_EMAIL || process.env.SMTP_USER || 'noreply@earthharvest.com';
 
 if (!process.env.FROM_EMAIL) {
-  console.warn('⚠️  FROM_EMAIL not set. Using fallback: onboarding@resend.dev');
-  console.warn('⚠️  For production, set FROM_EMAIL to a verified domain in Resend.');
+  console.warn(`⚠️  FROM_EMAIL not set. Using: ${FROM_EMAIL}`);
 }
 
 // Validate FROM_EMAIL format
@@ -97,7 +120,7 @@ const sendOTPEmail = async (email, otp, name) => {
   }
 
   // Check if email service is configured
-  if (!process.env.RESEND_API_KEY || !resend) {
+  if (!transporter) {
     console.warn(`⚠️  ${logPrefix} - Email service not configured`);
     console.warn(`⚠️  ${logPrefix} - OTP would be: ${otp}`);
     
@@ -110,7 +133,7 @@ const sendOTPEmail = async (email, otp, name) => {
       return { success: true, messageId: 'dev-mode', devOtp: otp };
     }
     
-    const error = new Error('Email service not configured. Please set RESEND_API_KEY in environment variables.');
+    const error = new Error('Email service not configured. Please set SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS in environment variables.');
     console.error(`❌ ${logPrefix} - Configuration error:`, error.message);
     throw error;
   }
@@ -257,50 +280,32 @@ const sendOTPEmail = async (email, otp, name) => {
     © ${new Date().getFullYear()} Earth & Harvest
     `;
 
-    console.log(`📧 ${logPrefix} - Sending email via Resend API...`);
+    console.log(`📧 ${logPrefix} - Sending email via SMTP...`);
     console.log(`📧 ${logPrefix} - From: ${FROM_EMAIL}`);
     console.log(`📧 ${logPrefix} - To: ${email}`);
 
-    const emailPayload = {
+    const mailOptions = {
       from: `Earth & Harvest <${FROM_EMAIL}>`,
-      to: [email],
+      to: email,
       subject: 'Your One-Time Password for Earth & Harvest',
       html: htmlContent,
       text: textContent,
     };
 
     // Log payload (without sensitive data)
-    console.log(`📧 ${logPrefix} - Payload prepared (subject: "${emailPayload.subject}")`);
+    console.log(`📧 ${logPrefix} - Payload prepared (subject: "${mailOptions.subject}")`);
 
-    const { data, error } = await resend.emails.send(emailPayload);
+    const info = await transporter.sendMail(mailOptions);
 
     const duration = Date.now() - startTime;
 
-    if (error) {
-      console.error(`❌ ${logPrefix} - Resend API error after ${duration}ms:`, {
-        message: error.message,
-        name: error.name,
-        statusCode: error.statusCode,
-        error: JSON.stringify(error, null, 2)
-      });
-      
-      // Provide more specific error messages
-      let errorMessage = 'Failed to send email';
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-      
-      throw new Error(`Failed to send email: ${errorMessage}`);
-    }
-
     console.log(`✅ ${logPrefix} - Email sent successfully in ${duration}ms`);
-    console.log(`✅ ${logPrefix} - Resend message ID: ${data?.id || 'N/A'}`);
+    console.log(`✅ ${logPrefix} - Message ID: ${info.messageId || 'N/A'}`);
+    console.log(`✅ ${logPrefix} - Response: ${info.response || 'N/A'}`);
     
     return { 
       success: true, 
-      messageId: data?.id || 'sent',
+      messageId: info.messageId || 'sent',
       duration: `${duration}ms`
     };
     
@@ -309,7 +314,11 @@ const sendOTPEmail = async (email, otp, name) => {
     console.error(`❌ ${logPrefix} - Error after ${duration}ms:`, {
       message: error.message,
       stack: error.stack,
-      name: error.name
+      name: error.name,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode
     });
     
     // In development, log the OTP so user can still test
@@ -350,7 +359,7 @@ const sendOrderConfirmationEmail = async (email, name, order) => {
   }
 
   // Check if email service is configured
-  if (!process.env.RESEND_API_KEY || !resend) {
+  if (!transporter) {
     console.warn(`⚠️  ${logPrefix} - Email service not configured`);
     console.warn(`⚠️  ${logPrefix} - Order confirmation would be sent to: ${email}`);
     
@@ -362,7 +371,7 @@ const sendOrderConfirmationEmail = async (email, name, order) => {
       return { success: true, messageId: 'dev-mode' };
     }
     
-    const error = new Error('Email service not configured. Please set RESEND_API_KEY in environment variables.');
+    const error = new Error('Email service not configured. Please set SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS in environment variables.');
     console.error(`❌ ${logPrefix} - Configuration error:`, error.message);
     throw error;
   }
@@ -614,48 +623,31 @@ const sendOrderConfirmationEmail = async (email, name, order) => {
     Premium, natural chews — from the Himalayas to your home.
     `;
 
-    console.log(`📧 ${logPrefix} - Sending email via Resend API...`);
+    console.log(`📧 ${logPrefix} - Sending email via SMTP...`);
     console.log(`📧 ${logPrefix} - From: ${FROM_EMAIL}`);
     console.log(`📧 ${logPrefix} - To: ${email}`);
 
-    const emailPayload = {
+    const mailOptions = {
       from: `Earth & Harvest <${FROM_EMAIL}>`,
-      to: [email],
+      to: email,
       subject: `Order Confirmation #${orderId.slice(-8).toUpperCase()} - Earth & Harvest`,
       html: htmlContent,
       text: textContent,
     };
 
-    console.log(`📧 ${logPrefix} - Payload prepared (subject: "${emailPayload.subject}")`);
+    console.log(`📧 ${logPrefix} - Payload prepared (subject: "${mailOptions.subject}")`);
 
-    const { data, error } = await resend.emails.send(emailPayload);
+    const info = await transporter.sendMail(mailOptions);
 
     const duration = Date.now() - startTime;
 
-    if (error) {
-      console.error(`❌ ${logPrefix} - Resend API error after ${duration}ms:`, {
-        message: error.message,
-        name: error.name,
-        statusCode: error.statusCode,
-        error: JSON.stringify(error, null, 2)
-      });
-      
-      let errorMessage = 'Failed to send email';
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-      
-      throw new Error(`Failed to send email: ${errorMessage}`);
-    }
-
     console.log(`✅ ${logPrefix} - Email sent successfully in ${duration}ms`);
-    console.log(`✅ ${logPrefix} - Resend message ID: ${data?.id || 'N/A'}`);
+    console.log(`✅ ${logPrefix} - Message ID: ${info.messageId || 'N/A'}`);
+    console.log(`✅ ${logPrefix} - Response: ${info.response || 'N/A'}`);
     
     return { 
       success: true, 
-      messageId: data?.id || 'sent',
+      messageId: info.messageId || 'sent',
       duration: `${duration}ms`
     };
     
@@ -664,7 +656,11 @@ const sendOrderConfirmationEmail = async (email, name, order) => {
     console.error(`❌ ${logPrefix} - Error after ${duration}ms:`, {
       message: error.message,
       stack: error.stack,
-      name: error.name
+      name: error.name,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode
     });
     
     // In development, log the order info
