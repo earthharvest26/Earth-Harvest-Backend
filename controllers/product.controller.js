@@ -11,6 +11,12 @@ exports.getAllProducts = async (req, res) => {
     if (search) {
       query.productName = { $regex: search, $options: 'i' };
     }
+    
+    // Only show enabled products for non-admin users
+    // Admins can see all products via /admin/products endpoint
+    if (!req.user || req.user.role !== 'admin') {
+      query.enabled = { $ne: false };
+    }
 
     const products = await Product.find(query)
       .sort({ createdAt: -1 })
@@ -55,6 +61,14 @@ exports.getProductById = async (req, res) => {
       });
     }
 
+    // Check if product is enabled (unless user is admin)
+    if ((!req.user || req.user.role !== 'admin') && product.enabled === false) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
     res.status(200).json({
       success: true,
       data: product
@@ -74,7 +88,12 @@ exports.getProductById = async (req, res) => {
  */
 exports.getFeaturedProducts = async (req, res) => {
   try {
-    const products = await Product.find({ stock: { $gt: 0 } })
+    const query = { 
+      stock: { $gt: 0 },
+      enabled: { $ne: false } // Only show enabled products
+    };
+    
+    const products = await Product.find(query)
       .sort({ rating: -1, totalReviews: -1 })
       .limit(10);
 

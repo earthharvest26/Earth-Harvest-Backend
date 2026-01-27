@@ -58,6 +58,11 @@ const productSchema = new mongoose.Schema({
 
   reviews: [reviewSchema],
 
+  enabled: {
+    type: Boolean,
+    default: true
+  }
+
 },{timestamps:true});
 
 productSchema.index({productName:1});

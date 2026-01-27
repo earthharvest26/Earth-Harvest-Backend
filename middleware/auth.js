@@ -26,6 +26,14 @@ const authenticate = async (req, res, next) => {
       });
     }
 
+    // Check if user is blocked
+    if (user.isBlocked === true) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been blocked. Please contact support.'
+      });
+    }
+
     req.user = user;
     req.userId = user._id;
     next();

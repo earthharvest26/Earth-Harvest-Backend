@@ -2,6 +2,7 @@ const Product = require("../models/product");
 const Order = require("../models/order");
 const User = require("../models/user");
 const Payment = require("../models/payment");
+const { sendOrderStatusUpdateEmail } = require("../utils/emailService");
 
 /**
  * Get dashboard statistics
@@ -11,6 +12,7 @@ exports.getDashboardStats = async (req, res) => {
     const totalUsers = await User.countDocuments({ role: 'user' });
     const totalProducts = await Product.countDocuments();
     const totalOrders = await Order.countDocuments();
+    const pendingOrders = await Order.countDocuments({ orderStatus: "Pending" });
     const totalRevenue = await Payment.aggregate([
       { $match: { status: "Success" } },
       { $group: { _id: null, total: { $sum: "$amount" } } }
@@ -33,6 +35,7 @@ exports.getDashboardStats = async (req, res) => {
           totalUsers,
           totalProducts,
           totalOrders,
+          pendingOrders,
           totalRevenue: totalRevenue[0]?.total || 0
         },
         recentOrders,
@@ -153,11 +156,14 @@ exports.deleteProduct = async (req, res) => {
  */
 exports.getAllProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 50, search } = req.query;
+    const { page = 1, limit = 50, search, enabled } = req.query;
 
     const query = {};
     if (search) {
       query.productName = { $regex: search, $options: 'i' };
+    }
+    if (enabled !== undefined) {
+      query.enabled = enabled === 'true';
     }
 
     const products = await Product.find(query)
@@ -180,6 +186,49 @@ exports.getAllProducts = async (req, res) => {
 
   } catch (error) {
     console.error("Get all products (admin) error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+/**
+ * Toggle product enabled/disabled status
+ */
+exports.toggleProductStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { enabled } = req.body;
+
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: "enabled must be a boolean value"
+      });
+    }
+
+    const product = await Product.findByIdAndUpdate(
+      id,
+      { enabled },
+      { new: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Product ${enabled ? 'enabled' : 'disabled'} successfully`,
+      data: product
+    });
+
+  } catch (error) {
+    console.error("Toggle product status error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error"
@@ -242,17 +291,47 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
+    // Get current order to check if status changed
+    const currentOrder = await Order.findById(id).populate("user", "name email").populate("product", "productName");
+    
+    if (!currentOrder) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    const previousStatus = currentOrder.orderStatus;
+
+    // Update order status
     const order = await Order.findByIdAndUpdate(
       id,
       { orderStatus },
       { new: true }
     ).populate("user", "name email").populate("product", "productName");
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found"
-      });
+    // Send email notification if status changed and order is not pending
+    if (previousStatus !== orderStatus && orderStatus !== "Pending" && order.user) {
+      try {
+        console.log(`📧 [Admin Order Update] Attempting to send order status update email...`);
+        const emailResult = await sendOrderStatusUpdateEmail(
+          order.user.email,
+          order.user.name,
+          order,
+          orderStatus
+        );
+        console.log(`✅ [Admin Order Update] Order status update email sent to ${order.user.email}`, {
+          messageId: emailResult?.messageId,
+          duration: emailResult?.duration
+        });
+      } catch (emailError) {
+        // Log error but don't fail the request
+        console.error("❌ [Admin Order Update] Failed to send order status update email:", {
+          error: emailError.message,
+          stack: emailError.stack,
+          orderId: order._id
+        });
+      }
     }
 
     res.status(200).json({
@@ -358,6 +437,97 @@ exports.updateUserRole = async (req, res) => {
 
   } catch (error) {
     console.error("Update user role error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+/**
+ * Get user details with order history
+ */
+exports.getUserDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id)
+      .select("-otp -otpExpiry -password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    // Get user orders
+    const orders = await Order.find({ user: id })
+      .populate("product", "productName images")
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user,
+        orders
+      }
+    });
+
+  } catch (error) {
+    console.error("Get user details error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+/**
+ * Toggle user blocked status
+ */
+exports.toggleUserBlockStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isBlocked } = req.body;
+
+    if (typeof isBlocked !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: "isBlocked must be a boolean value"
+      });
+    }
+
+    // Prevent admin from blocking themselves
+    if (id === req.userId.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot block yourself"
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { isBlocked },
+      { new: true }
+    ).select("-otp -otpExpiry -password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `User ${isBlocked ? 'blocked' : 'unblocked'} successfully`,
+      data: user
+    });
+
+  } catch (error) {
+    console.error("Toggle user block status error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error"

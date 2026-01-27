@@ -26,12 +26,28 @@ exports.addToCart = async (req, res) => {
       });
     }
 
+    // Check if product is enabled
+    if (product.enabled === false) {
+      return res.status(400).json({
+        success: false,
+        message: "This product is currently unavailable"
+      });
+    }
+
     // Verify size exists in product
     const sizeExists = product.sizes.some(s => s.weight.toString() === size || s.weight === size);
     if (!sizeExists) {
       return res.status(400).json({
         success: false,
         message: "Invalid size for this product"
+      });
+    }
+
+    // Check stock availability
+    if (product.stock < quantity) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient stock. Only ${product.stock} items available.`
       });
     }
 
@@ -90,13 +106,25 @@ exports.getCart = async (req, res) => {
     const userId = req.userId;
 
     const cart = await Cart.findOne({ user: userId })
-      .populate("items.product", "productName images sizes rating totalReviews");
+      .populate("items.product", "productName images sizes rating totalReviews stock enabled");
 
     if (!cart) {
       return res.status(200).json({
         success: true,
         data: { items: [], user: userId }
       });
+    }
+
+    // Filter out disabled or out-of-stock products
+    const validItems = cart.items.filter(item => {
+      if (!item.product) return false;
+      return item.product.enabled !== false && item.product.stock >= item.quantity;
+    });
+
+    // Update cart if items were filtered out
+    if (validItems.length !== cart.items.length) {
+      cart.items = validItems;
+      await cart.save();
     }
 
     res.status(200).json({
@@ -128,7 +156,7 @@ exports.updateCartItem = async (req, res) => {
       });
     }
 
-    const cart = await Cart.findOne({ user: userId });
+    const cart = await Cart.findOne({ user: userId }).populate('items.product');
 
     if (!cart) {
       return res.status(404).json({
@@ -143,6 +171,24 @@ exports.updateCartItem = async (req, res) => {
         success: false,
         message: "Item not found in cart"
       });
+    }
+
+    // Check if product is still enabled
+    if (item.product && item.product.enabled === false) {
+      return res.status(400).json({
+        success: false,
+        message: "This product is currently unavailable and has been removed from your cart"
+      });
+    }
+
+    // Validate stock if quantity is being increased
+    if (quantity > item.quantity && item.product) {
+      if (item.product.stock < quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock. Only ${item.product.stock} items available.`
+        });
+      }
     }
 
     if (quantity === 0) {

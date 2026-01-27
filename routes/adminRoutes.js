@@ -7,10 +7,13 @@ const {
   updateProduct,
   deleteProduct,
   getAllProducts,
+  toggleProductStatus,
   getAllOrders,
   updateOrderStatus,
   getAllUsers,
+  getUserDetails,
   updateUserRole,
+  toggleUserBlockStatus,
   getAllPayments
 } = require("../controllers/admin.controller");
 
@@ -25,6 +28,7 @@ router.get("/dashboard", getDashboardStats);
 router.get("/products", getAllProducts);
 router.post("/products", createProduct);
 router.put("/products/:id", updateProduct);
+router.patch("/products/:id/toggle", toggleProductStatus);
 router.delete("/products/:id", deleteProduct);
 
 // Order management
@@ -33,7 +37,9 @@ router.put("/orders/:id/status", updateOrderStatus);
 
 // User management
 router.get("/users", getAllUsers);
+router.get("/users/:id", getUserDetails);
 router.put("/users/:id/role", updateUserRole);
+router.patch("/users/:id/block", toggleUserBlockStatus);
 
 // Payment management
 router.get("/payments", getAllPayments);

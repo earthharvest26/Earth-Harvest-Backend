@@ -61,13 +61,19 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    // Normalize phone number in address (remove spaces) if present
+    const normalizedAddress = { ...address };
+    if (normalizedAddress.phone) {
+      normalizedAddress.phone = normalizedAddress.phone.replace(/\s+/g, '');
+    }
+
     // Create order
     const order = await Order.create({
       user: userId,
       product: productId,
       sizeSelected,
       quantity,
-      address,
+      address: normalizedAddress,
       amountPaid: amount.toString(),
       paymentStatus: "Pending",
       orderStatus: "Pending"

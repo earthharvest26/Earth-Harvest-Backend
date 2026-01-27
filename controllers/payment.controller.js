@@ -3,6 +3,7 @@ const Order = require("../models/order");
 const Payment = require("../models/payment");
 const Product = require("../models/product");
 const User = require("../models/user");
+const Cart = require("../models/cart");
 const { sendOrderConfirmationEmail } = require("../utils/emailService");
 
 /**
@@ -147,6 +148,21 @@ exports.paymentCallback = async (req, res) => {
           if (product) {
             product.stock = Math.max(0, product.stock - order.quantity);
             await product.save();
+          }
+
+          // Clear user cart on successful payment
+          if (payment.status === "Success") {
+            try {
+              const cart = await Cart.findOne({ user: order.user });
+              if (cart) {
+                cart.items = [];
+                await cart.save();
+                console.log(`✅ [Payment Callback] Cart cleared for user ${order.user}`);
+              }
+            } catch (cartError) {
+              console.error("❌ [Payment Callback] Failed to clear cart:", cartError);
+              // Don't fail payment if cart clearing fails
+            }
           }
 
           // Send order confirmation email if payment just completed
@@ -297,6 +313,19 @@ exports.testPayment = async (req, res) => {
     if (product) {
       product.stock = Math.max(0, product.stock - order.quantity);
       await product.save();
+    }
+
+    // Clear user cart on successful payment
+    try {
+      const cart = await Cart.findOne({ user: order.user });
+      if (cart) {
+        cart.items = [];
+        await cart.save();
+        console.log(`✅ [Test Payment] Cart cleared for user ${order.user}`);
+      }
+    } catch (cartError) {
+      console.error("❌ [Test Payment] Failed to clear cart:", cartError);
+      // Don't fail payment if cart clearing fails
     }
 
     // Send order confirmation email

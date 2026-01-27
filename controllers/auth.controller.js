@@ -40,6 +40,14 @@ exports.sendOTP = async (req, res) => {
 
     let user = await User.findOne({ email: email });
 
+    // Check if user is blocked (for existing users)
+    if (user && user.isBlocked === true) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been blocked. Please contact support."
+      });
+    }
+
     const otp = Math.floor(1000 + Math.random() * 9000);
     const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
 
