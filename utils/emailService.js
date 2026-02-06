@@ -87,7 +87,7 @@ try {
 }
 
 // Set FROM_EMAIL with validation
-FROM_EMAIL = process.env.FROM_EMAIL || process.env.SMTP_USER || 'noreply@earthharvest.com';
+FROM_EMAIL = process.env.FROM_EMAIL || process.env.SMTP_USER || 'info@earthandharvest.food';
 
 if (!process.env.FROM_EMAIL) {
   console.warn(`⚠️  FROM_EMAIL not set. Using: ${FROM_EMAIL}`);
