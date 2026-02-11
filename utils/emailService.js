@@ -5,11 +5,26 @@ const nodemailer = require('nodemailer');
  * PRODUCTION-SAFE EMAIL SERVICE (NODEMAILER)
  * ============================================
  * 
+ * Configured for Namecheap Email Hosting
+ * 
  * This service includes:
  * - Comprehensive environment variable validation
  * - Detailed logging for production debugging
  * - Graceful error handling
  * - Render.com deployment compatibility
+ * 
+ * Namecheap Email Configuration:
+ * - SMTP Host: earthandharvest.food (default) or mail.YOURDOMAIN.com
+ * - SMTP Port: 465 (SSL, default) or 587 (TLS/STARTTLS)
+ * - Authentication: Required (full email address as username)
+ * - Security: SSL (port 465) is default for Namecheap
+ * 
+ * Required Environment Variables:
+ * - SMTP_HOST: earthandharvest.food (or your Namecheap SMTP host)
+ * - SMTP_PORT: 465 (SSL, default) or 587 (TLS/STARTTLS)
+ * - SMTP_USER: your-full-email@yourdomain.com
+ * - SMTP_PASS: your-email-password
+ * - FROM_EMAIL: your-full-email@yourdomain.com (optional, defaults to SMTP_USER)
  */
 
 // ============================================
@@ -46,27 +61,48 @@ let transporter = null;
 let FROM_EMAIL = null;
 
 try {
+  // Namecheap Email SMTP Configuration
+  // Default to Namecheap SSL settings
+  const defaultHost = 'earthandharvest.food';
+  const defaultPort = 465; // SSL (Namecheap)
+  
+  // Parse port first to determine secure flag correctly
+  const port = parseInt(process.env.SMTP_PORT || defaultPort.toString(), 10);
+  const secure = port === 465;
+  
   const smtpConfig = {
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+    host: process.env.SMTP_HOST || defaultHost,
+    port: port,
+    secure: secure,
     auth: {
-      user: process.env.SMTP_USER,
+      user: process.env.SMTP_USER, // Full email address for Namecheap
       pass: process.env.SMTP_PASS,
-    },
+    }
   };
 
   // Validate required environment variables
   if (!smtpConfig.host || !smtpConfig.auth.user || !smtpConfig.auth.pass) {
     console.warn('⚠️  SMTP configuration is incomplete. Email functionality will be disabled.');
     console.warn('⚠️  Required: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS');
+    console.warn('⚠️  Namecheap Example:');
+    console.warn('⚠️    SMTP_HOST=earthandharvest.food');
+    console.warn('⚠️    SMTP_PORT=465');
+    console.warn('⚠️    SMTP_USER=your-email@yourdomain.com');
+    console.warn('⚠️    SMTP_PASS=your-email-password');
   } else {
     // Validate port
     if (isNaN(smtpConfig.port) || smtpConfig.port < 1 || smtpConfig.port > 65535) {
-      console.warn(`⚠️  SMTP_PORT (${process.env.SMTP_PORT}) is invalid. Using default: 587`);
-      smtpConfig.port = 587;
-      smtpConfig.secure = false;
+      console.warn(`⚠️  SMTP_PORT (${process.env.SMTP_PORT}) is invalid. Using default: ${defaultPort}`);
+      smtpConfig.port = defaultPort;
+      smtpConfig.secure = (defaultPort === 465);
     }
+
+    // Log SMTP configuration
+    console.log('📧 SMTP Configuration:');
+    console.log(`📧   Host: ${smtpConfig.host}`);
+    console.log(`📧   Port: ${smtpConfig.port}`);
+    console.log(`📧   Secure: ${smtpConfig.secure} (${smtpConfig.secure ? 'SSL' : 'TLS/STARTTLS'})`);
+    console.log(`📧   Auth User: ${smtpConfig.auth.user ? 'SET' : 'MISSING'}`);
 
     transporter = nodemailer.createTransport(smtpConfig);
     
@@ -87,10 +123,12 @@ try {
 }
 
 // Set FROM_EMAIL with validation
+// For Namecheap, FROM_EMAIL should match SMTP_USER (your full email address)
 FROM_EMAIL = process.env.FROM_EMAIL || process.env.SMTP_USER || 'info@earthandharvest.food';
 
 if (!process.env.FROM_EMAIL) {
   console.warn(`⚠️  FROM_EMAIL not set. Using: ${FROM_EMAIL}`);
+  console.warn(`⚠️  For Namecheap, FROM_EMAIL should match your SMTP_USER (full email address)`);
 }
 
 // Validate FROM_EMAIL format
