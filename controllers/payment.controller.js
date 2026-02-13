@@ -411,6 +411,21 @@ exports.verifyPayment = async (req, res) => {
       orderId: orderId
     });
 
+    // Update order status based on payment status
+    if (payment) {
+      if (payment.status === "Success" && order.paymentStatus !== "Completed") {
+        // Payment was successful - update order status
+        order.paymentStatus = "Completed";
+        order.orderStatus = "Confirmed";
+        await order.save();
+      } else if (payment.status === "Failed" && order.paymentStatus !== "Failed") {
+        // Payment failed - update order status
+        order.paymentStatus = "Failed";
+        // Keep orderStatus as Pending but mark payment as failed
+        await order.save();
+      }
+    }
+
     // If payment is successful and order is confirmed, ensure email is sent
     // This is a fallback in case the webhook didn't trigger the email
     if (order.paymentStatus === "Completed" && order.orderStatus === "Confirmed") {
