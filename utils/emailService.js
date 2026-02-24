@@ -296,6 +296,14 @@ const sendOTPEmail = async (email, otp, name) => {
           <div class="footer">
             <p>© ${new Date().getFullYear()} Earth & Harvest</p>
             <p>Premium, natural chews — from the Himalayas to your home.</p>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; text-align: left;">
+              <p style="margin: 4px 0; font-weight: 600;">Pradeep Paudyal</p>
+              <p style="margin: 4px 0;">Earth & Harvest Food</p>
+              <p style="margin: 4px 0;">pradeep.paudyal@earthandharvest.food</p>
+              <p style="margin: 4px 0;">www.earthandharvest.food</p>
+              <p style="margin: 4px 0;">+971 555 70 4875</p>
+              <p style="margin: 4px 0;">Dubai, UAE</p>
+            </div>
           </div>
     
         </div>
@@ -316,6 +324,13 @@ const sendOTPEmail = async (email, otp, name) => {
     If you didn't request this, you can safely ignore this email.
     
     © ${new Date().getFullYear()} Earth & Harvest
+    
+    Pradeep Paudyal
+    Earth & Harvest Food
+    pradeep.paudyal@earthandharvest.food
+    www.earthandharvest.food
+    +971 555 70 4875
+    Dubai, UAE
     `;
 
     console.log(`📧 ${logPrefix} - Sending email via SMTP...`);
@@ -626,6 +641,14 @@ const sendOrderConfirmationEmail = async (email, name, order) => {
           <div class="footer">
             <p>© ${new Date().getFullYear()} Earth & Harvest</p>
             <p>Premium, natural chews — from the Himalayas to your home.</p>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; text-align: left;">
+              <p style="margin: 4px 0; font-weight: 600;">Pradeep Paudyal</p>
+              <p style="margin: 4px 0;">Earth & Harvest Food</p>
+              <p style="margin: 4px 0;">pradeep.paudyal@earthandharvest.food</p>
+              <p style="margin: 4px 0;">www.earthandharvest.food</p>
+              <p style="margin: 4px 0;">+971 555 70 4875</p>
+              <p style="margin: 4px 0;">Dubai, UAE</p>
+            </div>
           </div>
     
         </div>
@@ -659,6 +682,13 @@ const sendOrderConfirmationEmail = async (email, name, order) => {
     
     © ${new Date().getFullYear()} Earth & Harvest
     Premium, natural chews — from the Himalayas to your home.
+    
+    Pradeep Paudyal
+    Earth & Harvest Food
+    pradeep.paudyal@earthandharvest.food
+    www.earthandharvest.food
+    +971 555 70 4875
+    Dubai, UAE
     `;
 
     console.log(`📧 ${logPrefix} - Sending email via SMTP...`);
@@ -973,6 +1003,14 @@ const sendOrderStatusUpdateEmail = async (email, name, order, newStatus) => {
           <div class="footer">
             <p>© ${new Date().getFullYear()} Earth & Harvest</p>
             <p>Premium, natural chews — from the Himalayas to your home.</p>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; text-align: left;">
+              <p style="margin: 4px 0; font-weight: 600;">Pradeep Paudyal</p>
+              <p style="margin: 4px 0;">Earth & Harvest Food</p>
+              <p style="margin: 4px 0;">pradeep.paudyal@earthandharvest.food</p>
+              <p style="margin: 4px 0;">www.earthandharvest.food</p>
+              <p style="margin: 4px 0;">+971 555 70 4875</p>
+              <p style="margin: 4px 0;">Dubai, UAE</p>
+            </div>
           </div>
     
         </div>
@@ -998,6 +1036,13 @@ const sendOrderStatusUpdateEmail = async (email, name, order, newStatus) => {
     
     © ${new Date().getFullYear()} Earth & Harvest
     Premium, natural chews — from the Himalayas to your home.
+    
+    Pradeep Paudyal
+    Earth & Harvest Food
+    pradeep.paudyal@earthandharvest.food
+    www.earthandharvest.food
+    +971 555 70 4875
+    Dubai, UAE
     `;
 
     console.log(`📧 ${logPrefix} - Sending email via SMTP...`);
