@@ -1,6 +1,7 @@
 const Order = require("../models/order");
 const Product = require("../models/product");
 const Cart = require("../models/cart");
+const { calculateBulkDiscount } = require("../utils/discount");
 
 /**
  * Create order from cart or direct purchase
@@ -61,6 +62,17 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    // Calculate price with bulk discount (28.5% off for 5+ packets)
+    const priceCalculation = calculateBulkDiscount(quantity, selectedSize.price);
+    const finalAmount = priceCalculation.finalAmount;
+
+    // Validate that the provided amount matches the calculated amount (with tolerance for rounding)
+    const amountDifference = Math.abs(parseFloat(amount) - finalAmount);
+    if (amountDifference > 0.01) {
+      console.warn(`Amount mismatch: provided=${amount}, calculated=${finalAmount}`);
+      // Use calculated amount for security
+    }
+
     // Normalize phone number in address (remove spaces) if present
     const normalizedAddress = { ...address };
     if (normalizedAddress.phone) {
@@ -74,7 +86,10 @@ exports.createOrder = async (req, res) => {
       sizeSelected,
       quantity,
       address: normalizedAddress,
-      amountPaid: amount.toString(),
+      amountPaid: finalAmount.toFixed(2),
+      originalAmount: priceCalculation.originalAmount.toFixed(2),
+      discountAmount: priceCalculation.discountAmount.toFixed(2),
+      discountPercentage: priceCalculation.hasDiscount ? priceCalculation.discountPercentage : 0,
       paymentStatus: "Pending",
       orderStatus: "Pending"
     });
@@ -94,7 +109,10 @@ exports.createOrder = async (req, res) => {
       data: {
         _id: order._id,
         orderId: order._id, // For compatibility
-        amount: parseFloat(amount),
+        amount: finalAmount,
+        originalAmount: priceCalculation.originalAmount,
+        discountAmount: priceCalculation.discountAmount,
+        discountPercentage: priceCalculation.hasDiscount ? priceCalculation.discountPercentage : 0,
         orderStatus: order.orderStatus,
         paymentStatus: order.paymentStatus
       }

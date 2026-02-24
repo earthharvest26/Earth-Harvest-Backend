@@ -25,7 +25,10 @@ const orderSchema = new mongoose.Schema({
         zipCode: Number,
         phone: String
     },
-    amountPaid:String,
+    amountPaid: String,
+    originalAmount: String, // Original amount before discount
+    discountAmount: String, // Discount amount
+    discountPercentage: { type: Number, default: 0 }, // Discount percentage applied
     paymentId: String,
     paymentStatus: {
         type: String,
