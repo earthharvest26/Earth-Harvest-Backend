@@ -13,6 +13,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const productRoutes = require("./routes/productRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const landingPageMediaRoutes = require("./routes/landingPageMediaRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -39,6 +40,7 @@ app.get("/health", (req, res) => {
 
 // Public routes
 app.use("/api/products", productRoutes);
+app.use("/api/landing-page-media", landingPageMediaRoutes);
 
 // Authentication routes
 app.use("/api/auth", authRoutes);

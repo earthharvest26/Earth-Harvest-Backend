@@ -16,6 +16,9 @@ const {
   toggleUserBlockStatus,
   getAllPayments
 } = require("../controllers/admin.controller");
+const { uploadFile } = require("../controllers/upload.controller");
+const { updateLandingPageMedia } = require("../controllers/landingPageMedia.controller");
+const upload = require("../middleware/upload");
 
 // All admin routes require authentication and admin role
 router.use(authenticate);
@@ -43,6 +46,12 @@ router.patch("/users/:id/block", toggleUserBlockStatus);
 
 // Payment management
 router.get("/payments", getAllPayments);
+
+// File upload
+router.post("/upload", upload.single('file'), uploadFile);
+
+// Landing page media management
+router.put("/landing-page-media", updateLandingPageMedia);
 
 module.exports = router;
 
