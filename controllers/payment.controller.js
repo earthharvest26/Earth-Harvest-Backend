@@ -43,10 +43,13 @@ exports.createPayment = async (req, res) => {
     }
 
     // Prepare payment items
+    // IMPORTANT: Nomod expects amount per item, not total amount
+    // So we need to divide the total amount by quantity to get per-item price
     const product = order.product;
+    const amountPerItem = (parseFloat(amount) / order.quantity).toFixed(2);
     const items = [{
       name: product.productName || "Earth & Harvest Product",
-      amount: amount.toString(), // Nomod expects STRING
+      amount: amountPerItem, // Nomod expects per-item amount, not total
       quantity: order.quantity
     }];
 

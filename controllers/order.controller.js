@@ -62,7 +62,7 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    // Calculate price with bulk discount (28.5% off for 5+ packets)
+    // Calculate price with bulk discount (10 dirhams off per packet for 5+ packets)
     const priceCalculation = calculateBulkDiscount(quantity, selectedSize.price);
     const finalAmount = priceCalculation.finalAmount;
 
@@ -89,7 +89,7 @@ exports.createOrder = async (req, res) => {
       amountPaid: finalAmount.toFixed(2),
       originalAmount: priceCalculation.originalAmount.toFixed(2),
       discountAmount: priceCalculation.discountAmount.toFixed(2),
-      discountPercentage: priceCalculation.hasDiscount ? priceCalculation.discountPercentage : 0,
+      discountPercentage: priceCalculation.hasDiscount ? (priceCalculation.discountAmount / priceCalculation.originalAmount * 100) : 0, // Calculate percentage for display
       paymentStatus: "Pending",
       orderStatus: "Pending"
     });
@@ -112,7 +112,7 @@ exports.createOrder = async (req, res) => {
         amount: finalAmount,
         originalAmount: priceCalculation.originalAmount,
         discountAmount: priceCalculation.discountAmount,
-        discountPercentage: priceCalculation.hasDiscount ? priceCalculation.discountPercentage : 0,
+        discountPercentage: priceCalculation.hasDiscount ? (priceCalculation.discountAmount / priceCalculation.originalAmount * 100) : 0, // Calculate percentage for display
         orderStatus: order.orderStatus,
         paymentStatus: order.paymentStatus
       }
