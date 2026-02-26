@@ -1,6 +1,7 @@
 const Order = require("../models/order");
 const Product = require("../models/product");
 const Cart = require("../models/cart");
+const User = require("../models/user");
 const { calculateBulkDiscount } = require("../utils/discount");
 
 /**
@@ -77,6 +78,39 @@ exports.createOrder = async (req, res) => {
     const normalizedAddress = { ...address };
     if (normalizedAddress.phone) {
       normalizedAddress.phone = normalizedAddress.phone.replace(/\s+/g, '');
+    }
+
+    // Save address to user profile if user doesn't have one or if it's incomplete
+    const user = await User.findById(userId);
+    if (user) {
+      const hasIncompleteAddress = !user.address || 
+        !user.address.street || 
+        !user.address.city || 
+        !user.address.state || 
+        !user.address.country;
+      
+      if (hasIncompleteAddress && normalizedAddress.street && normalizedAddress.city && normalizedAddress.state) {
+        // Update user address with the address from checkout
+        user.address = {
+          street: normalizedAddress.street,
+          city: normalizedAddress.city,
+          state: normalizedAddress.state,
+          country: normalizedAddress.country || "United Arab Emirates",
+          zipCode: normalizedAddress.zipCode || user.address?.zipCode
+        };
+        
+        // Also update phone number if provided and user doesn't have one
+        if (normalizedAddress.phone && !user.phoneNumber) {
+          user.phoneNumber = normalizedAddress.phone;
+        }
+        
+        // Update name if provided and user doesn't have one
+        if (normalizedAddress.name && !user.name) {
+          user.name = normalizedAddress.name;
+        }
+        
+        await user.save();
+      }
     }
 
     // Create order
